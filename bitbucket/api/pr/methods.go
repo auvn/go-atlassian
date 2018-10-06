@@ -7,10 +7,19 @@ import (
 	"github.com/auvn/go-atlassian/bitbucket/api"
 )
 
-func GetPage(ctx context.Context, g *atlassian.RestClient, path api.Resource) (*api.PullRequestsPage, error) {
-	var resp api.PullRequestsPage
-	if err := g.Get(ctx, path.Path().String(), &resp); err != nil {
+type pullRequestsPage struct {
+	api.Page
+	Values []api.PullRequest `json:"values"`
+}
+
+func GetPage(ctx context.Context, g *atlassian.RestClient, path api.Path) (*api.PullRequests, error) {
+	var resp pullRequestsPage
+	if err := g.Get(ctx, path.String(), &resp); err != nil {
 		return nil, err
 	}
-	return &resp, nil
+	return &api.PullRequests{
+		NextPage: resp.Page.Next(path),
+		IsLast:   resp.Page.IsLastPage,
+		Values:   resp.Values,
+	}, nil
 }

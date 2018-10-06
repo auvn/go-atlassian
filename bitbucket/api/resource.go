@@ -1,6 +1,9 @@
 package api
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 type Resource interface {
 	Path() Path
@@ -15,18 +18,34 @@ func (p Path) String() string {
 	return p.Path + p.Params.Join()
 }
 
-type PathParams []string
+type PathParams map[string]string
 
 func (p PathParams) WithString(key, value string) PathParams {
+	if p == nil {
+		p = PathParams{}
+	}
+
 	if value == "" {
 		return p
 	}
-	return append(p, key+"="+value)
+
+	p[key] = value
+
+	return p
+}
+
+func (p PathParams) WithInt64(key string, value int64) PathParams {
+	return p.WithString(key, strconv.Itoa(int(value)))
 }
 
 func (p PathParams) Join() string {
-	if len(p) > 0 {
-		return "?" + strings.Join(p, "&")
+	paramsLen := len(p)
+	if paramsLen > 0 {
+		params := make([]string, 0, paramsLen)
+		for k, v := range p {
+			params = append(params, k+"="+v)
+		}
+		return "?" + strings.Join(params, "&")
 	}
 	return ""
 }

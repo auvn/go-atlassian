@@ -10,18 +10,19 @@ import (
 	"os"
 
 	"github.com/auvn/go-atlassian/atlassian"
+	"github.com/auvn/go-atlassian/bitbucket/api"
 	"github.com/auvn/go-atlassian/bitbucket/api/pr"
 	"github.com/auvn/go-atlassian/bitbucket/api/pr/activity"
 	"github.com/auvn/go-atlassian/bitbucket/api/pr/activity/activityconv"
 	"github.com/auvn/go-atlassian/bitbucket/api/resource"
 	"github.com/auvn/go-atlassian/bitbucket/api/resource/dashboard"
+	"github.com/auvn/go-json/jsonutil"
 	"github.com/auvn/go-shell/output"
 	"github.com/auvn/go-shell/strfmt"
 	"gopkg.in/yaml.v2"
 )
 
 var (
-	ctx     = context.TODO()
 	options = struct {
 		ConfigFile string
 	}{}
@@ -67,7 +68,7 @@ func main() {
 
 	bitbucketAPI := resource.Latest{}
 
-	resp, err := pr.GetPage(ctx, client,
+	prs, err := allPullRequests(client,
 		dashboard.New(bitbucketAPI).
 			PullRequests().
 			WithParams().
@@ -80,36 +81,36 @@ func main() {
 
 	var pullRequests pullRequests
 
-	for i := range resp.Values {
-		repo := resp.Values[i].FromRef.Repository
-		aResp, err := activity.Get(ctx, client,
+	for i := range prs {
+		repo := prs[i].FromRef.Repository
+		activities, err := allActivities(client,
 			bitbucketAPI.
 				Project(repo.Project.Key).
 				Repo(repo.Slug).
-				PullRequest(resp.Values[i].ID).
+				PullRequest(prs[i].ID).
 				Activities())
 		if err != nil {
 			fatal(err)
 		}
 
-		if len(aResp.Values) == 0 {
+		if len(activities) == 0 {
 			continue
 		}
 
 		prRef := pullRequest{
-			Title:  resp.Values[i].Title,
-			Link:   resp.Values[i].Links.Self[0].Href,
-			Author: resp.Values[i].Author.User.EmailAddress,
+			Title:  prs[i].Title,
+			Link:   prs[i].Links.Self[0].Href,
+			Author: prs[i].Author.User.EmailAddress,
 		}
 
-		for j := len(aResp.Values) - 1; j >= 0; j-- {
-			if activity.ActionOf(aResp.Values[j]) != activity.ActionCommented {
+		for j := len(activities) - 1; j >= 0; j-- {
+			if activity.ActionOf(activities[j]) != activity.ActionCommented {
 				continue
 			}
 
 			prRef.Activities = append(
 				prRef.Activities, prCommentActivity{
-					Comment: activityconv.CommentFromObject(aResp.Values[j]),
+					Comment: activityconv.CommentFromObject(activities[j]),
 				})
 		}
 		pullRequests.PRs = append(pullRequests.PRs, prRef)
@@ -117,6 +118,47 @@ func main() {
 	}
 
 	pullRequests.Fprintf(os.Stdout)
+}
+
+func allActivities(client *atlassian.RestClient, resource api.Resource) ([]jsonutil.Object, error) {
+	objects := make([]jsonutil.Object, 0)
+	nextPage := resource.Path()
+	for {
+		activities, err := activity.GetPage(context.TODO(), client, nextPage)
+		if err != nil {
+			return nil, err
+		}
+
+		objects = append(objects, activities.Values...)
+
+		if activities.IsLast {
+			break
+		}
+
+		nextPage = activities.NextPage
+	}
+
+	return objects, nil
+}
+
+func allPullRequests(client *atlassian.RestClient, resource api.Resource) ([]api.PullRequest, error) {
+	prs := make([]api.PullRequest, 0)
+	nextPage := resource.Path()
+	for {
+		activities, err := pr.GetPage(context.TODO(), client, nextPage)
+		if err != nil {
+			return nil, err
+		}
+
+		prs = append(prs, activities.Values...)
+
+		if activities.IsLast {
+			break
+		}
+
+		nextPage = activities.NextPage
+	}
+	return prs, nil
 }
 
 type pullRequests struct {

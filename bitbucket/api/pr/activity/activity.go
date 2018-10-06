@@ -6,9 +6,10 @@ import (
 	"github.com/auvn/go-json/jsonutil"
 )
 
-type GetActivitiesResponse struct {
-	api.Page
-	Values []jsonutil.Object `json:"values"`
+type Activities struct {
+	NextPage api.Path
+	IsLast   bool
+	Values   []jsonutil.Object
 }
 
 const (

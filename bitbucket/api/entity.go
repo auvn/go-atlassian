@@ -39,14 +39,8 @@ type PullRequest struct {
 	Author  PullRequestAuthor `json:"author"`
 }
 
-type PullRequestsPage struct {
-	Page
-	Values []PullRequest `json:"values"`
-}
-
-type Page struct {
-	Size       int64 `json:"size"`
-	IsLastPage bool  `json:"isLastPage"`
-	Limit      int64 `json:"limit"`
-	Start      int64 `json:"int64"`
+type PullRequests struct {
+	NextPage Path
+	IsLast   bool
+	Values   []PullRequest
 }
