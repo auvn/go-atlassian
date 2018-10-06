@@ -15,8 +15,8 @@ import (
 	"github.com/auvn/go-atlassian/bitbucket/api/pr/activity/activityconv"
 	"github.com/auvn/go-atlassian/bitbucket/api/resource"
 	"github.com/auvn/go-atlassian/bitbucket/api/resource/dashboard"
-	ioutil2 "github.com/auvn/go-io/ioutil"
-	"github.com/auvn/go-shell/fmt/fmtstr"
+	"github.com/auvn/go-shell/output"
+	"github.com/auvn/go-shell/strfmt"
 	"gopkg.in/yaml.v2"
 )
 
@@ -139,19 +139,20 @@ type pullRequest struct {
 }
 
 func (pr pullRequest) Fprint(w io.Writer) {
-	fmtstr.Fprintf(w, fmtstr.StyleBold, "%s\n", pr.Title)
+	strfmt.Fprintf(w, strfmt.StyleBold, "%s\n", pr.Title)
 	fmt.Fprintf(w, "%s\n\n", pr.Link)
 
 	for i := range pr.Activities {
 		prefixWriter := w
 
 		if pr.Activities[i].IsLatestCommentBy(pr.Author) {
-			prefixWriter = ioutil2.NewPrefixWriter(w, "        ")
+			prefixWriter = output.NewPrefixWriter(w, "        ")
 		} else {
-			prefixWriter = ioutil2.NewPrefixWriter(w, fmtstr.Bold("  =/=/= "))
+			prefixWriter = output.NewPrefixWriter(w, strfmt.Bold("  =/=/= "))
 		}
 
 		pr.Activities[i].Fprint(prefixWriter)
+		fmt.Fprintln(w)
 		fmt.Fprintln(w)
 	}
 }
@@ -169,7 +170,7 @@ func walkComment(level int, c pr.Comment, fn func(s string) bool) (maxLevel int,
 	}
 
 	if fn(c.Author.EmailAddress) && level >= maxLevel {
-		return maxLevel, true
+		return level, true
 	}
 	return maxLevel, false
 }
@@ -183,29 +184,22 @@ func (a prCommentActivity) IsLatestCommentBy(emailAddress string) bool {
 }
 
 func (a prCommentActivity) Fprint(w io.Writer) {
-
 	if a.Comment.CommentAnchor.Path != "" {
-		fmtstr.Fprintf(w, fmtstr.StyleBold, "Line: %d Path: %s:\n", a.Comment.CommentAnchor.Line, a.Comment.CommentAnchor.Path)
+		strfmt.Fprintf(w, strfmt.StyleBold, "Line: %d Path: %s:\n", a.Comment.CommentAnchor.Line, a.Comment.CommentAnchor.Path)
 	}
 	prComments{Comments: []pr.Comment{a.Comment.Comment}}.Fprint(w)
 }
 
 type prComments struct {
-	Level    int
-	Comments []pr.Comment
-}
-
-func indent(cnt int) (s string) {
-	for i := 0; i < cnt; i++ {
-		s = s + "  "
-	}
-	return s
+	indentWidth int
+	Comments    []pr.Comment
 }
 
 func (cc prComments) Fprint(w io.Writer) {
-	for i, c := range cc.Comments {
-		fmt.Fprintf(w, "%s%s: %s\n", indent(cc.Level+i), fmtstr.Bold(c.Author.EmailAddress), c.Text)
+	indentWriter := output.NewSameIndentWriter(w, cc.indentWidth)
+	for _, c := range cc.Comments {
+		fmt.Fprintf(indentWriter, "%s: %s\n", strfmt.Bold(c.Author.EmailAddress), c.Text)
 
-		prComments{Level: cc.Level + 1, Comments: c.Comments}.Fprint(w)
+		prComments{indentWidth: cc.indentWidth + 2, Comments: c.Comments}.Fprint(w)
 	}
 }
