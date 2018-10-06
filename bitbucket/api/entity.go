@@ -40,7 +40,6 @@ type PullRequest struct {
 }
 
 type PullRequests struct {
-	NextPage Path
-	IsLast   bool
-	Values   []PullRequest
+	Page
+	Values []PullRequest
 }

@@ -7,9 +7,8 @@ import (
 )
 
 type Activities struct {
-	NextPage api.Path
-	IsLast   bool
-	Values   []jsonutil.Object
+	api.Page
+	Values []jsonutil.Object
 }
 
 const (

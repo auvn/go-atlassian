@@ -122,20 +122,20 @@ func main() {
 
 func allActivities(client *atlassian.RestClient, resource api.Resource) ([]jsonutil.Object, error) {
 	objects := make([]jsonutil.Object, 0)
-	nextPage := resource.Path()
+	path := resource.Path()
 	for {
-		resp, err := activity.GetPage(context.TODO(), client, nextPage)
+		resp, err := activity.GetPage(context.TODO(), client, path)
 		if err != nil {
 			return nil, err
 		}
 
 		objects = append(objects, resp.Values...)
 
-		if resp.IsLast {
+		if resp.IsLastPage {
 			break
 		}
 
-		nextPage = resp.NextPage
+		path = resp.Page.Next(path)
 	}
 
 	return objects, nil
@@ -143,20 +143,20 @@ func allActivities(client *atlassian.RestClient, resource api.Resource) ([]jsonu
 
 func allPullRequests(client *atlassian.RestClient, resource api.Resource) ([]api.PullRequest, error) {
 	prs := make([]api.PullRequest, 0)
-	nextPage := resource.Path()
+	path := resource.Path()
 	for {
-		resp, err := pr.GetPage(context.TODO(), client, nextPage)
+		resp, err := pr.GetPage(context.TODO(), client, path)
 		if err != nil {
 			return nil, err
 		}
 
 		prs = append(prs, resp.Values...)
 
-		if resp.IsLast {
+		if resp.IsLastPage {
 			break
 		}
 
-		nextPage = resp.NextPage
+		path = resp.Page.Next(path)
 	}
 	return prs, nil
 }
