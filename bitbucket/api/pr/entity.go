@@ -14,5 +14,5 @@ type Comment struct {
 }
 
 func (c Comment) UpdatedAt() time.Time {
-	return time.Unix(c.UpdatedDate, 0)
+	return time.Unix(c.UpdatedDate/1000, 0)
 }

@@ -8,19 +8,22 @@ import (
 
 func CommentFromObject(obj jsonutil.Object) pr.Comment {
 	const (
-		keyText     = "text"
-		keyAuthor   = "author"
-		keyComments = "comments"
+		keyText        = "text"
+		keyAuthor      = "author"
+		keyComments    = "comments"
+		keyUpdatedDate = "updatedDate"
 	)
 
 	text, _ := obj.Value(keyText)
 	author, _ := obj.Value(keyAuthor)
 	comments, _ := obj.Value(keyComments)
+	updatedDate, _ := obj.Value(keyUpdatedDate)
 
 	return pr.Comment{
-		Author:   apiconv.UserFromObject(author.Object()),
-		Text:     text.String(),
-		Comments: CommentsFromObjects(comments.Objects()...),
+		Author:      apiconv.UserFromObject(author.Object()),
+		Text:        text.String(),
+		Comments:    CommentsFromObjects(comments.Objects()...),
+		UpdatedDate: updatedDate.Int64(),
 	}
 }
 

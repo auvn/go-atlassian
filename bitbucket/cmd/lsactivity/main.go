@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"time"
 
 	"github.com/auvn/go-atlassian/atlassian"
 	"github.com/auvn/go-atlassian/bitbucket/api"
@@ -24,7 +25,8 @@ import (
 
 var (
 	options = struct {
-		ConfigFile string
+		ConfigFile    string
+		MaxCommentAge time.Duration
 	}{}
 )
 
@@ -34,6 +36,7 @@ func fatal(err error) {
 
 func init() {
 	flag.StringVar(&options.ConfigFile, "config", ".config", "configuration file")
+	flag.DurationVar(&options.MaxCommentAge, "age", 0, "max comment age")
 }
 
 type Config struct {
@@ -98,9 +101,10 @@ func main() {
 		}
 
 		prRef := pullRequest{
-			Title:  prs[i].Title,
-			Link:   prs[i].Links.Self[0].Href,
-			Author: prs[i].Author.User.EmailAddress,
+			Title:         prs[i].Title,
+			Link:          prs[i].Links.Self[0].Href,
+			Author:        prs[i].Author.User.EmailAddress,
+			MaxCommentAge: options.MaxCommentAge,
 		}
 
 		for j := len(activities) - 1; j >= 0; j-- {
@@ -174,20 +178,30 @@ func (prs pullRequests) Fprintf(w io.Writer) {
 }
 
 type pullRequest struct {
-	Title      string
-	Link       string
-	Author     string
-	Activities []prCommentActivity
+	Title         string
+	Link          string
+	Author        string
+	Activities    []prCommentActivity
+	MaxCommentAge time.Duration
 }
 
 func (pr pullRequest) Fprint(w io.Writer) {
 	strfmt.Fprintf(w, strfmt.StyleBold, "%s\n", pr.Title)
 	fmt.Fprintf(w, "%s\n\n", pr.Link)
 
+	now := time.Now().UTC()
+
 	for i := range pr.Activities {
 		prefixWriter := w
 
-		if pr.Activities[i].IsLatestCommentBy(pr.Author) {
+		latestComment := pr.Activities[i].LatestComment()
+
+		if pr.MaxCommentAge > 0 &&
+			latestComment.UpdatedAt().Add(pr.MaxCommentAge).Before(now) {
+			continue
+		}
+
+		if latestComment.Author.EmailAddress == pr.Author {
 			prefixWriter = output.NewPrefixWriter(w, "        ")
 		} else {
 			prefixWriter = output.NewPrefixWriter(w, strfmt.Bold("  =/=/= "))
@@ -203,26 +217,21 @@ type prCommentActivity struct {
 	Comment activity.Comment
 }
 
-func walkComment(level int, c pr.Comment, fn func(s string) bool) (maxLevel int, ok bool) {
+func latestComment(c pr.Comment) (latest pr.Comment) {
+	latest = c
+
 	for i := range c.Comments {
-		maxLevel, ok = walkComment(level+1, c.Comments[i], fn)
-		if ok {
-			return maxLevel, true
+		next := latestComment(c.Comments[i])
+		if next.UpdatedDate >= latest.UpdatedDate {
+			latest = next
 		}
 	}
 
-	if fn(c.Author.EmailAddress) && level >= maxLevel {
-		return level, true
-	}
-	return maxLevel, false
+	return latest
 }
 
-func (a prCommentActivity) IsLatestCommentBy(emailAddress string) bool {
-	_, ok := walkComment(0, a.Comment.Comment, func(str string) bool {
-		return emailAddress == str
-	})
-
-	return ok
+func (a prCommentActivity) LatestComment() pr.Comment {
+	return latestComment(a.Comment.Comment)
 }
 
 func (a prCommentActivity) Fprint(w io.Writer) {
