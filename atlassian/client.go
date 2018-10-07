@@ -78,3 +78,39 @@ func (c *Client) Do(ctx context.Context, req *http.Request) (*Response, error) {
 
 	return &Response{resp}, nil
 }
+
+type DefaultClient struct {
+	Client Client
+}
+
+func (c *DefaultClient) do(ctx context.Context, method, path string, dest interface{}) error {
+	req, err := c.Client.NewRequest(method, path, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.Client.Do(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	return resp.UnmarshalJSON(dest)
+}
+
+func (c *DefaultClient) Get(ctx context.Context, path string, dest interface{}) error {
+	if err := c.do(ctx, http.MethodGet, path, dest); err != nil {
+		return errors.Wrap(err, "failed to perform get request")
+	}
+	return nil
+}
+
+func (c *DefaultClient) Post(ctx context.Context, path string, dest interface{}) error {
+	if err := c.do(ctx, http.MethodPost, path, dest); err != nil {
+		return errors.Wrap(err, "failed to perform post request")
+	}
+	return nil
+}

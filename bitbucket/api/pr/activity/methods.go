@@ -7,7 +7,7 @@ import (
 	"github.com/auvn/go-atlassian/bitbucket/api"
 )
 
-func GetPage(ctx context.Context, g *atlassian.RestClient, path api.Path) (*Activities, error) {
+func GetPage(ctx context.Context, g *atlassian.DefaultClient, path api.Path) (*Activities, error) {
 	var resp Activities
 	if err := g.Get(ctx, path.String(), &resp); err != nil {
 		return nil, err
