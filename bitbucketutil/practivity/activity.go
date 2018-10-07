@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"sort"
 	"time"
 
 	"github.com/auvn/go-atlassian/atlassian"
@@ -39,25 +38,16 @@ func List(client *atlassian.DefaultClient, maxAge time.Duration) (*PullRequests,
 		return &pullRequests, nil
 	}
 
-	ch, err := listPullRequests(client, time.Now().UTC().Add(-maxAge), prs)
+	pullRequests.PRs, err = listPullRequests(client, time.Now().UTC().Add(-maxAge), prs)
 	if err != nil {
 		return nil, err
 	}
 
-	for prRef := range ch {
-		pullRequests.PRs = append(pullRequests.PRs, *prRef)
-	}
-
-	sort.Slice(pullRequests.PRs, func(i, j int) bool {
-		return pullRequests.PRs[i].Order > pullRequests.PRs[j].Order
-	})
-
 	return &pullRequests, nil
 }
 
-func listPullRequests(client *atlassian.DefaultClient, tm time.Time, prs []api.PullRequest) (<-chan *PullRequest, error) {
-	pullRequestsChan := make(chan *PullRequest, len(prs))
-	defer close(pullRequestsChan)
+func listPullRequests(client *atlassian.DefaultClient, tm time.Time, prs []api.PullRequest) ([]PullRequest, error) {
+	pullRequests := make([]PullRequest, len(prs))
 
 	group, _ := errgroup.WithContext(context.TODO())
 	for i := range prs {
@@ -68,7 +58,7 @@ func listPullRequests(client *atlassian.DefaultClient, tm time.Time, prs []api.P
 				return err
 			}
 
-			pullRequestsChan <- prRef
+			pullRequests[i] = *prRef
 
 			return nil
 		})
@@ -78,7 +68,7 @@ func listPullRequests(client *atlassian.DefaultClient, tm time.Time, prs []api.P
 		return nil, err
 	}
 
-	return pullRequestsChan, nil
+	return pullRequests, nil
 }
 
 func listPullRequest(client *atlassian.DefaultClient, tm time.Time, pr api.PullRequest) (*PullRequest, error) {
