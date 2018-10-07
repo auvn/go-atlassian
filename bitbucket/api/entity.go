@@ -10,6 +10,7 @@ type Links struct {
 
 type User struct {
 	EmailAddress string `json:"emailAddress"`
+	Slug         string `json:"slug"`
 }
 
 type Project struct {

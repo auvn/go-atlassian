@@ -112,7 +112,7 @@ func listPullRequest(client *atlassian.DefaultClient, tm time.Time, pr api.PullR
 
 		prRef.Activities = append(prRef.Activities, Comment{
 			Comment:   commentActivity,
-			Highlight: latestComment.Author.EmailAddress != pr.Author.User.EmailAddress,
+			Highlight: latestComment.Author.Slug != pr.Author.User.Slug,
 		})
 	}
 	return &prRef, nil
