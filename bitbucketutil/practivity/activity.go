@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"time"
 
 	"github.com/auvn/go-atlassian/atlassian"
@@ -26,7 +27,6 @@ func List(client *atlassian.DefaultClient, maxAge time.Duration) (*PullRequests,
 		dashboard.New(bitbucketAPI).
 			PullRequests().
 			WithParams().
-			WithOrder().Newest().
 			WithRole().Author().
 			WithState().Open())
 	if err != nil {
@@ -48,6 +48,10 @@ func List(client *atlassian.DefaultClient, maxAge time.Duration) (*PullRequests,
 		pullRequests.PRs = append(pullRequests.PRs, *prRef)
 	}
 
+	sort.Slice(pullRequests.PRs, func(i, j int) bool {
+		return pullRequests.PRs[i].Order > pullRequests.PRs[j].Order
+	})
+
 	return &pullRequests, nil
 }
 
@@ -57,9 +61,9 @@ func listPullRequests(client *atlassian.DefaultClient, tm time.Time, prs []api.P
 
 	group, _ := errgroup.WithContext(context.TODO())
 	for i := range prs {
-		pullRequest := prs[i]
+		i := i
 		group.Go(func() error {
-			prRef, err := listPullRequest(client, tm, pullRequest)
+			prRef, err := listPullRequest(client, tm, prs[i])
 			if err != nil {
 				return err
 			}
@@ -90,9 +94,9 @@ func listPullRequest(client *atlassian.DefaultClient, tm time.Time, pr api.PullR
 	}
 
 	prRef := PullRequest{
-		Title:  pr.Title,
-		Link:   pr.Links.Self[0].Href,
-		Author: pr.Author.User.EmailAddress,
+		Title: pr.Title,
+		Link:  pr.Links.Self[0].Href,
+		Order: pr.UpdatedDate,
 	}
 
 	if len(activities) == 0 {
@@ -114,7 +118,7 @@ func listPullRequest(client *atlassian.DefaultClient, tm time.Time, pr api.PullR
 
 		prRef.Activities = append(prRef.Activities, Comment{
 			Comment:   commentActivity,
-			Highlight: latestComment.Author.EmailAddress != prRef.Author,
+			Highlight: latestComment.Author.EmailAddress != pr.Author.User.EmailAddress,
 		})
 	}
 	return &prRef, nil
@@ -135,7 +139,7 @@ func (prs PullRequests) Fprintf(w io.Writer) {
 type PullRequest struct {
 	Title      string
 	Link       string
-	Author     string
+	Order      int64
 	Activities []Comment
 	Highlight  bool
 }
