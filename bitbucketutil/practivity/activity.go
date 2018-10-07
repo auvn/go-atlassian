@@ -38,7 +38,12 @@ func List(client *atlassian.DefaultClient, maxAge time.Duration) (*PullRequests,
 		return &pullRequests, nil
 	}
 
-	pullRequests.PRs, err = listPullRequests(client, time.Now().UTC().Add(-maxAge), prs)
+	var commentsAfter time.Time
+	if maxAge > 0 {
+		commentsAfter = time.Now().UTC().Add(-maxAge)
+	}
+
+	pullRequests.PRs, err = listPullRequests(client, commentsAfter, prs)
 	if err != nil {
 		return nil, err
 	}
@@ -101,8 +106,7 @@ func listPullRequest(client *atlassian.DefaultClient, tm time.Time, pr api.PullR
 		commentActivity := activityconv.CommentFromObject(activities[j])
 
 		latestComment := bitbucketutil.LatestComment(commentActivity.Comment)
-		if latestComment.
-			UpdatedAt().Before(tm) {
+		if latestComment.UpdatedAt().Before(tm) {
 			continue
 		}
 
