@@ -89,9 +89,10 @@ func listPullRequest(client *atlassian.DefaultClient, tm time.Time, pr api.PullR
 	}
 
 	prRef := PullRequest{
-		Title: pr.Title,
-		Link:  pr.Links.Self[0].Href,
-		Order: pr.UpdatedDate,
+		Title:     pr.Title,
+		Link:      pr.Links.Self[0].Href,
+		Order:     pr.UpdatedDate,
+		Reviewers: pr.Reviewers,
 	}
 
 	if len(activities) == 0 {
@@ -134,19 +135,48 @@ type PullRequest struct {
 	Title      string
 	Link       string
 	Order      int64
+	Reviewers  []api.Reviewer
 	Activities []Comment
 	Highlight  bool
 }
 
 func (pr PullRequest) Fprint(w io.Writer) {
 	strfmt.Fprintf(w, strfmt.StyleBold, "%s\n", pr.Title)
-	fmt.Fprintf(w, "%s\n\n", pr.Link)
+	fmt.Fprintf(w, "%s\n", pr.Link)
+	pr.participantsOverview().Fprint(w)
+
+	fmt.Fprint(w, "\n\n")
 
 	for i := range pr.Activities {
 		pr.Activities[i].Fprint(w)
 		fmt.Fprintln(w)
 		fmt.Fprintln(w)
 	}
+}
+
+type prOverview struct {
+	Approved  []string
+	NeedsWork []string
+}
+
+func (o prOverview) Fprint(w io.Writer) {
+	strfmt.Fprintf(w, strfmt.StyleGreen, "Approved: %d - %v\n", len(o.Approved), o.Approved)
+	if len(o.NeedsWork) > 0 {
+		strfmt.Fprintf(w, strfmt.StyleRed, "Needs work: %d - %v", len(o.NeedsWork), o.NeedsWork)
+	}
+}
+
+func (pr PullRequest) participantsOverview() (o prOverview) {
+	for i := range pr.Reviewers {
+		slug := pr.Reviewers[i].User.Slug
+		switch pr.Reviewers[i].Status {
+		case api.ReviewerStatusApproved:
+			o.Approved = append(o.Approved, slug)
+		case api.ReviewerStatusNeedsWork:
+			o.NeedsWork = append(o.NeedsWork, slug)
+		}
+	}
+	return o
 }
 
 type Comment struct {

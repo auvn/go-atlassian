@@ -30,6 +30,19 @@ type PullRequestAuthor struct {
 	User User `json:"user"`
 }
 
+const (
+	ReviewerStatusApproved   = "APPROVED"
+	ReviewerStatusUnapproved = "UNAPPROVED"
+	ReviewerStatusNeedsWork  = "NEEDS_WORK"
+)
+
+type Reviewer struct {
+	User     User   `json:"user"`
+	Status   string `json:"status"`
+	Role     string `json:"role"`
+	Approved bool   `json:"approved"`
+}
+
 type PullRequest struct {
 	Links       Links             `json:"links"`
 	ID          int64             `json:"id"`
@@ -38,6 +51,7 @@ type PullRequest struct {
 	FromRef     Ref               `json:"fromRef"`
 	ToRef       Ref               `json:"toRef"`
 	Author      PullRequestAuthor `json:"author"`
+	Reviewers   []Reviewer        `json:"reviewers"`
 	CreatedDate int64             `json:"createdDate"`
 	UpdatedDate int64             `json:"updatedDate"`
 }
