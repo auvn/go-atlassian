@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -97,6 +98,26 @@ func (c *DefaultClient) do(ctx context.Context, method, path string, dest interf
 	}
 
 	defer resp.Body.Close()
+
+	//TODO
+	if resp.StatusCode != http.StatusOK {
+		switch resp.StatusCode {
+		case http.StatusBadRequest:
+		case http.StatusUnauthorized:
+		case http.StatusForbidden:
+		case http.StatusNotFound:
+		case http.StatusMethodNotAllowed:
+		case http.StatusConflict:
+		case http.StatusUnsupportedMediaType:
+		case http.StatusInternalServerError:
+		}
+
+		bb, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return errors.Errorf("%s: %s", resp.Status, (bb))
+	}
 
 	return resp.UnmarshalJSON(dest)
 }

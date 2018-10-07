@@ -29,8 +29,8 @@ func init() {
 }
 
 type Config struct {
-	Auth string
-	URL  string
+	AuthToken string
+	URL       string
 }
 
 func config() (cfg Config) {
@@ -53,7 +53,7 @@ func main() {
 
 	client := &atlassian.DefaultClient{
 		Client: atlassian.Client{
-			Auth:    cfg.Auth,
+			Auth:    "Bearer " + cfg.AuthToken,
 			BaseURL: cfg.URL,
 		},
 	}
