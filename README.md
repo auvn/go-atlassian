@@ -4,7 +4,7 @@
 Install:
 
 ``` shell
-$ go install github.com/auvn/go-atlassian/bitbucketutil/cmd/lspractivity/
+$ get -u github.com/auvn/go-atlassian/bitbucketutil/cmd/lspractivity
 ```
 
 Create configuration file:
