@@ -21,13 +21,22 @@ import (
 
 var bitbucketAPI = resource.Latest{}
 
-func List(client *atlassian.DefaultClient, maxAge time.Duration) (*PullRequests, error) {
-	prs, err := bitbucketutil.GetPullRequests(client,
-		dashboard.New(bitbucketAPI).
-			PullRequests().
-			WithParams().
-			WithRole().Author().
-			WithState().Open())
+type ListParams struct {
+	MaxAge   time.Duration
+	IsAuthor bool
+}
+
+func List(client *atlassian.DefaultClient, params ListParams) (*PullRequests, error) {
+
+	resourceParams := dashboard.New(bitbucketAPI).
+		PullRequests().
+		WithParams().
+		WithState().Open()
+	if params.IsAuthor {
+		resourceParams = resourceParams.WithRole().Author()
+	}
+
+	prs, err := bitbucketutil.GetPullRequests(client, resourceParams)
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +48,8 @@ func List(client *atlassian.DefaultClient, maxAge time.Duration) (*PullRequests,
 	}
 
 	var commentsAfter time.Time
-	if maxAge > 0 {
-		commentsAfter = time.Now().UTC().Add(-maxAge)
+	if params.MaxAge > 0 {
+		commentsAfter = time.Now().UTC().Add(-params.MaxAge)
 	}
 
 	pullRequests.PRs, err = listPullRequests(client, commentsAfter, prs)

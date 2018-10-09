@@ -16,6 +16,7 @@ var (
 	options = struct {
 		ConfigFile    string
 		MaxCommentAge time.Duration
+		All           bool
 	}{}
 )
 
@@ -26,6 +27,7 @@ func fatal(err error) {
 func init() {
 	flag.StringVar(&options.ConfigFile, "config", ".config", "configuration file")
 	flag.DurationVar(&options.MaxCommentAge, "age", 0, "max comment age")
+	flag.BoolVar(&options.All, "all", false, "show activity for all pull requests")
 }
 
 type Config struct {
@@ -57,7 +59,10 @@ func main() {
 			BaseURL: cfg.URL,
 		},
 	}
-	activity, err := practivity.List(client, options.MaxCommentAge)
+	activity, err := practivity.List(client, practivity.ListParams{
+		IsAuthor: !options.All,
+		MaxAge:   options.MaxCommentAge,
+	})
 	if err != nil {
 		fatal(err)
 	}
