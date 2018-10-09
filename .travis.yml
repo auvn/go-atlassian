@@ -6,4 +6,4 @@ go:
 
 script:
   - go get -u github.com/auvn/go-atlassian/bitbucketutil/cmd/lspractivity
-  - lspractivity -h || [[ $? != 2 ]] && return 1
+  - lspractivity -h || [[ $? = 2 ]] && return 0
