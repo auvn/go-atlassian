@@ -3,3 +3,7 @@ language: go
 go:
   - "1.9.x"
   - master
+
+script:
+  - go get -u github.com/auvn/go-atlassian/bitbucketutil/cmd/lspractivity
+  - lspractivity -h || [[ $? = 2 ]] && return 0
