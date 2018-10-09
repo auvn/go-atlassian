@@ -23,6 +23,7 @@ type Repository struct {
 }
 
 type Ref struct {
+	ID         string     `json:"id"`
 	Repository Repository `json:"repository"`
 }
 
