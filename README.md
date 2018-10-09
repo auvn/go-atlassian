@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/auvn/go-atlassian.svg)](https://travis-ci.com/auvn/go-atlassian)
+
 ### Bitbucket utils
 #### List Pull Requests Activity
 
