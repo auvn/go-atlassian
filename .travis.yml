@@ -6,4 +6,4 @@ go:
 
 after_success:
   - go get -u github.com/auvn/go-atlassian/bitbucketutil/cmd/lspractivity
-  - [ -f ./lspractivity ] || echo "binary not found" && return 1
+  - [ -f ./bin/lspractivity ] || echo "binary not found" && return 1
