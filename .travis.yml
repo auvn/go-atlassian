@@ -4,6 +4,6 @@ go:
   - "1.9.x"
   - master
 
-after_success:
+script:
   - go get -u github.com/auvn/go-atlassian/bitbucketutil/cmd/lspractivity
-  - ./bin/lspractivity -h
+  - lspractivity -h
