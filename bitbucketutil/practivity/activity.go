@@ -73,8 +73,9 @@ func List(client *atlassian.DefaultClient, params ListParams) (*PullRequests, er
 func filterPullRequests(prs []api.PullRequest, fn func(pr api.PullRequest) bool) []api.PullRequest {
 	filtered := make([]api.PullRequest, 0, len(prs))
 	for i := range prs {
-		if !fn(prs[i]) {
-			filtered = append(filtered, prs[i])
+		pullRequest := prs[i]
+		if !fn(pullRequest) {
+			filtered = append(filtered, pullRequest)
 		}
 	}
 	return filtered
