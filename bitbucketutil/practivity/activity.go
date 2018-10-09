@@ -22,12 +22,12 @@ import (
 var bitbucketAPI = resource.Latest{}
 
 type ListParams struct {
-	MaxAge   time.Duration
-	IsAuthor bool
+	MaxAge     time.Duration
+	IsAuthor   bool
+	FromBranch string
 }
 
 func List(client *atlassian.DefaultClient, params ListParams) (*PullRequests, error) {
-
 	resourceParams := dashboard.New(bitbucketAPI).
 		PullRequests().
 		WithParams().
@@ -47,12 +47,22 @@ func List(client *atlassian.DefaultClient, params ListParams) (*PullRequests, er
 		return &pullRequests, nil
 	}
 
-	var commentsAfter time.Time
+	var skipCommentsBefore time.Time
 	if params.MaxAge > 0 {
-		commentsAfter = time.Now().UTC().Add(-params.MaxAge)
+		skipCommentsBefore = time.Now().UTC().Add(-params.MaxAge)
 	}
 
-	pullRequests.PRs, err = listPullRequests(client, commentsAfter, prs)
+	if params.FromBranch != "" {
+		fromRefID := "refs/heads/" + params.FromBranch
+		prs = filterPullRequests(prs,
+			func(pr api.PullRequest) bool { return pr.FromRef.ID != fromRefID })
+	}
+
+	pullRequests.PRs, err = listPullRequests(client,
+		listPullRequestsParams{
+			SkipCommentsBefore: skipCommentsBefore,
+			PRs:                prs,
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -60,19 +70,45 @@ func List(client *atlassian.DefaultClient, params ListParams) (*PullRequests, er
 	return &pullRequests, nil
 }
 
-func listPullRequests(client *atlassian.DefaultClient, tm time.Time, prs []api.PullRequest) ([]PullRequest, error) {
-	pullRequests := make([]PullRequest, len(prs))
+func filterPullRequests(prs []api.PullRequest, fn func(pr api.PullRequest) bool) []api.PullRequest {
+	filtered := make([]api.PullRequest, 0, len(prs))
+	for i := range prs {
+		if !fn(prs[i]) {
+			filtered = append(filtered, prs[i])
+		}
+	}
+	return filtered
+}
+
+type listPullRequestsParams struct {
+	SkipCommentsBefore time.Time
+	PRs                []api.PullRequest
+}
+
+func listPullRequests(client *atlassian.DefaultClient, params listPullRequestsParams) ([]PullRequest, error) {
+	pullRequests := make([]PullRequest, len(params.PRs))
 
 	group, _ := errgroup.WithContext(context.TODO())
-	for i := range prs {
+	for i := range params.PRs {
 		i := i
 		group.Go(func() error {
-			prRef, err := listPullRequest(client, tm, prs[i])
+			pullRequest := params.PRs[i]
+			comments, err := listComments(client,
+				listCommentsParams{
+					SkipBefore: params.SkipCommentsBefore,
+					PR:         pullRequest,
+				})
 			if err != nil {
 				return err
 			}
 
-			pullRequests[i] = *prRef
+			pullRequests[i] = PullRequest{
+				Title:      pullRequest.Title,
+				Link:       pullRequest.Links.Self[0].Href,
+				Order:      pullRequest.UpdatedDate,
+				Reviewers:  pullRequest.Reviewers,
+				Activities: comments,
+			}
 
 			return nil
 		})
@@ -85,28 +121,28 @@ func listPullRequests(client *atlassian.DefaultClient, tm time.Time, prs []api.P
 	return pullRequests, nil
 }
 
-func listPullRequest(client *atlassian.DefaultClient, tm time.Time, pr api.PullRequest) (*PullRequest, error) {
-	repo := pr.FromRef.Repository
+type listCommentsParams struct {
+	SkipBefore time.Time
+	PR         api.PullRequest
+}
+
+func listComments(client *atlassian.DefaultClient, params listCommentsParams) ([]Comment, error) {
+	repo := params.PR.FromRef.Repository
 	activities, err := bitbucketutil.GetActivities(client,
 		bitbucketAPI.
 			Project(repo.Project.Key).
 			Repo(repo.Slug).
-			PullRequest(pr.ID).
+			PullRequest(params.PR.ID).
 			Activities())
 	if err != nil {
 		return nil, err
 	}
 
-	prRef := PullRequest{
-		Title:     pr.Title,
-		Link:      pr.Links.Self[0].Href,
-		Order:     pr.UpdatedDate,
-		Reviewers: pr.Reviewers,
+	if len(activities) == 0 {
+		return nil, nil
 	}
 
-	if len(activities) == 0 {
-		return &prRef, nil
-	}
+	var comments []Comment
 
 	for j := len(activities) - 1; j >= 0; j-- {
 		if activity.ActionOf(activities[j]) != activity.ActionCommented {
@@ -116,16 +152,16 @@ func listPullRequest(client *atlassian.DefaultClient, tm time.Time, pr api.PullR
 		commentActivity := activityconv.CommentFromObject(activities[j])
 
 		latestComment := bitbucketutil.LatestComment(commentActivity.Comment)
-		if latestComment.UpdatedAt().Before(tm) {
+		if latestComment.UpdatedAt().Before(params.SkipBefore) {
 			continue
 		}
 
-		prRef.Activities = append(prRef.Activities, Comment{
+		comments = append(comments, Comment{
 			Comment:   commentActivity,
-			Highlight: latestComment.Author.Slug != pr.Author.User.Slug,
+			Highlight: latestComment.Author.Slug != params.PR.Author.User.Slug,
 		})
 	}
-	return &prRef, nil
+	return comments, nil
 }
 
 type PullRequests struct {
@@ -146,7 +182,6 @@ type PullRequest struct {
 	Order      int64
 	Reviewers  []api.Reviewer
 	Activities []Comment
-	Highlight  bool
 }
 
 func (pr PullRequest) Fprint(w io.Writer) {

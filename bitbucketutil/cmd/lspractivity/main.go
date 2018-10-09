@@ -17,6 +17,7 @@ var (
 		ConfigFile    string
 		MaxCommentAge time.Duration
 		All           bool
+		Branch        string
 	}{}
 )
 
@@ -28,6 +29,7 @@ func init() {
 	flag.StringVar(&options.ConfigFile, "config", ".config", "configuration file")
 	flag.DurationVar(&options.MaxCommentAge, "age", 0, "max comment age")
 	flag.BoolVar(&options.All, "all", false, "show activity for all pull requests")
+	flag.StringVar(&options.Branch, "branch", "", "show pull requests activity only for the specified branch")
 }
 
 type Config struct {
@@ -59,10 +61,12 @@ func main() {
 			BaseURL: cfg.URL,
 		},
 	}
-	activity, err := practivity.List(client, practivity.ListParams{
-		IsAuthor: !options.All,
-		MaxAge:   options.MaxCommentAge,
-	})
+	activity, err := practivity.List(client,
+		practivity.ListParams{
+			IsAuthor:   !options.All,
+			MaxAge:     options.MaxCommentAge,
+			FromBranch: options.Branch,
+		})
 	if err != nil {
 		fatal(err)
 	}
