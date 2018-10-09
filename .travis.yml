@@ -3,3 +3,6 @@ language: go
 go:
   - "1.9.x"
   - master
+
+after_success:
+  - go get -u github.com/auvn/go-atlassian/bitbucketutil/cmd/lspractivity
