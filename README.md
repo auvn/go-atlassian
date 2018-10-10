@@ -6,13 +6,13 @@
 Install:
 
 ``` shell
-$ go get -u github.com/auvn/go-atlassian/bitbucketutil/cmd/lspractivity
+$ go get -u github.com/auvn/go-atlassian/bitbucketutil/cmd/lspr
 ```
 
 Create configuration file:
 
 ``` shell
-$ cat <<EOT>> ~/.work/.lspractivity.config
+$ cat <<EOT>> ~/.work/.lspr.config
 authtoken: <your generated bitbucket token>
 url: https://<your bitbucket host>/rest
 EOT
@@ -21,11 +21,11 @@ EOT
 Define an alias to simplify usage of the command:
 
 ``` shell
-$ alias lspractivity="lspractivity -config ~/.work/.lspractivity.config"
+$ alias lspr="lspr -config ~/.work/.lspr.config"
 ```
 
 Use to see comments activity in your open pull requests:
 
 ``` shell
-$ lspractivity -age 24h | less # show comments for the last 24hours
+$ lspr -age 24h | less # show comments for the last 24hours
 ```
