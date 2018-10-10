@@ -2,8 +2,7 @@ language: go
 
 env:
   global:
-    - INSTALL_CMD="go get -u -v github.com/auvn/go-atlassian/bitbucketutil/cmd/lspractivity"
-    - DIST_NAME=lspr
+    - INSTALL_CMD="go get -u -v github.com/auvn/go-atlassian/bitbucketutil/cmd/..."
 
 jobs:
   include:
@@ -11,12 +10,6 @@ jobs:
       go:
         - 1.9.x
         - master
-
-    - stage: Dry run
-      install: skip
-      script:
-        - eval $INSTALL_CMD
-        - lspractivity -h || [[ $? = 2 ]] && return 0
 
     - &deploy
       stage: GitHub Release
@@ -27,8 +20,8 @@ jobs:
       script:
         - eval $INSTALL_CMD
         - mkdir -p deploy/bin deploy/dist
-        - cp $(which lspractivity) deploy/bin/$DIST_NAME
-        - tar -czf deploy/dist/$DIST_NAME-$TRAVIS_OS_NAME.tar.gz -C ./deploy/bin .
+        - cp -v $GOPATH/bin/* deploy/bin/
+        - tar -czf deploy/dist/bitbucketutils-$TRAVIS_OS_NAME.tar.gz -C ./deploy/bin .
         - ls -la deploy/dist
       deploy:
         provider: releases
