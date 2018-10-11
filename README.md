@@ -29,3 +29,17 @@ Use to see comments activity in your open pull requests:
 ``` shell
 $ lspr -age 24h | less # show comments for the last 24hours
 ```
+
+Usage:
+
+```
+Usage of lspr:
+  -age duration
+        max comment age
+  -all
+        show activity for all pull requests
+  -branch string
+        show pull requests activity only for the specified branch
+  -config string
+        configuration file (default ".config")
+```
