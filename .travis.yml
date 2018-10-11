@@ -18,6 +18,7 @@ jobs:
         - 1.9.x
       install: skip
       script:
+        - cd ${TRAVIS_HOME}
         - eval $INSTALL_CMD
         - mkdir -p deploy/bin deploy/dist
         - cp -v $GOPATH/bin/* deploy/bin/
@@ -28,7 +29,7 @@ jobs:
         api_key:
           secure: oZriZt2Geljf4/3uzyTvwBEiibKOoYK/zGa5yJ9tM0aO3JSaWj2kzYWQwhS3tjU0QwhWvvTTfsiued50VeTVknRIfHBwfriYiqzI/6F936qh0OAuRWuBMl5UzneM6D1BLKcoo99z8krJftRenqffjbvw7ossfMkg950ERax5NUWFH16fWQKZJpgdiwCSHFoGLnJbQdrqR1Cutvol8FR+PH2uIThyiveB9hmCWtAgavP0K4XkM5Uk4C+Mjf88A/ueZSJR2pFDLcucUXkFGOm5ojCODi6Rxi82e9wMt+vym3JZkOvTCGakwlleVZOmQ4cvbh8UxDzsGHosJATDb+OYn1NRlAKHHwxIrpuZZOssEDY6NtBiywBqGPjF09P82KQLD2wsWdJ4uxPYJ6O2xCq6Mw0WxFgWw5J4Yr6WYksOG5OIadQANZQBfghpDU0hRQt1S7NzjH2gJe31hMlTi+baaXo3mkzOgOpOuIuzn0nuREjv0TtxsybgJN4FPecHYuMj3CimiKjDQ+iMTm/X+qJgvYcAOsSQRKrU2RLRnIPZkKE/uTyyqtzDuAfuqzIuXW6xq6qiE05+0VllpsaZQRy8rs29ANK3Ejfl5uMWWdJxsTtzoNhdl7HjU0f1pJwNemePS78RfbFPO/jBqGjYMV8swiL6b4D5lkB7rTuVC5MGDR8=
         file_glob: true
-        file: deploy/dist/*
+        file: ${TRAVIS_HOME}/deploy/dist/*
 
         on:
           tags: true
